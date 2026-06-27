@@ -5,6 +5,34 @@
 const MODEL = "claude-sonnet-4-6";
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 
+// Fetch a website's visible text (best-effort), so Claude can analyze it.
+async function fetchSiteText(url) {
+  try {
+    // Basic URL hygiene
+    let target = url.trim();
+    if (!/^https?:\/\//i.test(target)) target = "https://" + target;
+    const resp = await fetch(target, {
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; UpseraBot/1.0)" },
+      redirect: "follow",
+    });
+    if (!resp.ok) return { ok: false, error: `Could not load the site (status ${resp.status}).` };
+    let html = await resp.text();
+    // Strip scripts/styles, then tags, collapse whitespace.
+    html = html.replace(/<script[\s\S]*?<\/script>/gi, " ")
+               .replace(/<style[\s\S]*?<\/style>/gi, " ")
+               .replace(/<[^>]+>/g, " ")
+               .replace(/&[a-z]+;/gi, " ")
+               .replace(/\s+/g, " ")
+               .trim();
+    // Keep it reasonable for the model.
+    const text = html.slice(0, 6000);
+    if (!text) return { ok: false, error: "The site returned no readable text." };
+    return { ok: true, text };
+  } catch (err) {
+    return { ok: false, error: "Failed to reach the website. Check the URL." };
+  }
+}
+
 // The four entry paths Upsera supports. Each gets a tailored instruction.
 const PATH_BRIEFS = {
   capital: "The user has capital but no specific idea yet. Analyze their interests, region, budget and time, then propose concrete business ideas and outline a feasibility study.",
@@ -57,14 +85,24 @@ module.exports = async function handler(req, res) {
   try {
     // Vercel parses JSON bodies automatically; fall back to manual parse just in case.
     const body = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {});
-    const { path = "idea", input = "", lang = "en" } = body;
+    const { path = "idea", input = "", lang = "en", inputMethod = "text" } = body;
 
     if (!input || !input.trim()) {
       return res.status(400).json({ error: "Please provide a description of your business." });
     }
 
+    // If the user gave a website link, fetch its text and analyze that.
+    let effectiveInput = input.trim();
+    if (inputMethod === "link") {
+      const site = await fetchSiteText(input);
+      if (!site.ok) {
+        return res.status(400).json({ error: site.error });
+      }
+      effectiveInput = `The user provided their website URL: ${input.trim()}\n\nHere is the readable text content extracted from that website:\n"""\n${site.text}\n"""\n\nAnalyze this business based on its website.`;
+    }
+
     const brief = PATH_BRIEFS[path] || PATH_BRIEFS.idea;
-    const userMessage = `Path context: ${brief}\n\nUser's input:\n${input.trim()}`;
+    const userMessage = `Path context: ${brief}\n\nUser's input:\n${effectiveInput}`;
 
     const anthropicRes = await fetch(ANTHROPIC_URL, {
       method: "POST",
