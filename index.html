@@ -90,7 +90,8 @@ const T = {
       problem:{head:"Great - we'll solve your challenges", line:"Express your business and problems the easiest way for you, and we'll offer practical solutions in your favor."}},
     expressTitle:"How would you like to express yourself?",
     accessNote:"Express yourself your way.", accessRest:"Write, talk, photograph, record, draw, or upload a file - Upsera understands you any way.",
-    methods:{text:["Write","Typed text"], voice:["Speak","Voice message"], image:["Photograph","A photo of my business"], video:["Video","A video tour"], draw:["Draw","Sketch by hand"], file:["Upload a file","Report / study / document"], choices:["Choose","Ready-made questions"]},
+    methods:{text:["Write","Typed text"], link:["Website link","Analyze my site"], voice:["Speak","Voice message"], image:["Photograph","A photo of my business"], video:["Video","A video tour"], draw:["Draw","Sketch by hand"], file:["Upload a file","Report / study / document"], choices:["Choose","Ready-made questions"]},
+    linkPh:"https://your-website.com", linkHint:"Paste your website or store URL - we read and analyze it", linkSub:"Works with company sites, online stores, and landing pages",
     textPh:"Write freely here...", voiceHint:"Press and talk - we transcribe and understand your business.",
     imageHint:"Upload or take a photo of your business or product", videoHint:"Upload or record a short video about your business", drawHint:"Draw your idea on the canvas - we understand sketches",
     fileHint:"Upload a report, feasibility study, or any document", fileSub:"We read and fully analyze your file",
@@ -130,7 +131,8 @@ const T = {
       problem:{head:"ممتاز - سنحلّ تحدياتك", line:"عبّر عن نشاطك ومشاكلك بالطريقة الأسهل لك، ونقدّم توصيات عملية لصالحك."}},
     expressTitle:"كيف تريد أن تعبّر؟",
     accessNote:"عبّر بالطريقة التي تناسبك.", accessRest:"اكتب، تكلّم، صوّر، سجّل، ارسم، أو ارفع ملفاً - Upsera تفهمك بأي وسيلة.",
-    methods:{text:["أكتب","نص مكتوب"], voice:["أتكلّم","رسالة صوتية"], image:["أصوّر","صورة لنشاطي"], video:["فيديو","جولة بالفيديو"], draw:["أرسم","رسمة بيدي"], file:["أرفع ملفاً","تقرير / دراسة / مستند"], choices:["أختار","أسئلة جاهزة"]},
+    methods:{text:["أكتب","نص مكتوب"], link:["رابط موقع","حلّل موقعي"], voice:["أتكلّم","رسالة صوتية"], image:["أصوّر","صورة لنشاطي"], video:["فيديو","جولة بالفيديو"], draw:["أرسم","رسمة بيدي"], file:["أرفع ملفاً","تقرير / دراسة / مستند"], choices:["أختار","أسئلة جاهزة"]},
+    linkPh:"https://your-website.com", linkHint:"الصق رابط موقعك أو متجرك - نقرأه ونحلّله", linkSub:"يعمل مع مواقع الشركات والمتاجر الإلكترونية وصفحات الهبوط",
     textPh:"اكتب هنا بحرّية...", voiceHint:"اضغط وتحدّث - نحوّل كلامك ونفهم نشاطك.",
     imageHint:"ارفع أو التقط صورة لنشاطك أو منتجك", videoHint:"ارفع أو سجّل فيديو قصيراً عن نشاطك", drawHint:"ارسم فكرتك على اللوحة - نفهم الرسم",
     fileHint:"ارفع تقريراً، دراسة جدوى، أو أي مستند", fileSub:"نقرأ ملفك ونحلّله بالكامل",
@@ -198,6 +200,7 @@ const I = {
   chart:"M3 3v18h18 M18 17V9 M13 17V5 M8 17v-3",
   checkSq:"M9 11l3 3L22 4 M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11",
   globe:["M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z","M2 12h20","M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z"],
+  link:["M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1.5 1.5","M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1.5-1.5"],
   chevron:"M6 9l6 6 6-6",
   sun:["M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10z","M12 1v2 M12 21v2 M4.2 4.2l1.4 1.4 M18.4 18.4l1.4 1.4 M1 12h2 M21 12h2 M4.2 19.8l1.4-1.4 M18.4 5.6l1.4-1.4"],
   moon:"M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z",
@@ -228,8 +231,8 @@ function Logo({h=34, theme="dark"}){
 }
 const PATH_META = {capital:{icon:"compass",accent:C.accent}, idea:{icon:"palette",accent:C.primary}, brand:{icon:"building",accent:C.gold}, problem:{icon:"wrench",accent:C.rose}};
 const PATH_ORDER = ["capital","idea","brand","problem"];
-const INPUT_IDS = ["text","voice","image","video","draw","file","choices"];
-const INPUT_ICON = {text:"type",voice:"mic",image:"camera",video:"video",draw:"pencil",file:"fileUp",choices:"checkSq"};
+const INPUT_IDS = ["text","link","voice","image","video","draw","file","choices"];
+const INPUT_ICON = {text:"type",link:"link",voice:"mic",image:"camera",video:"video",draw:"pencil",file:"fileUp",choices:"checkSq"};
 const OUT_IDS = ["doc","audio","slides","video"];
 const OUT_ICON = {doc:"fileType",audio:"headphones",slides:"film",video:"film"};
 const CHARTER_META = [{icon:"lock",ok:true},{icon:"shieldChk",ok:true},{icon:"pin",ok:true},{icon:"x",ok:false}];
@@ -294,7 +297,7 @@ function App(){
       const r = await fetch("/api/analyze",{
         method:"POST",
         headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({ path, input:userInput, lang }),
+        body:JSON.stringify({ path, input:userInput, lang, inputMethod }),
       });
       const data = await r.json();
       if(!r.ok || data.error){ throw new Error(data.error || "Request failed"); }
@@ -369,6 +372,12 @@ function App(){
 
   const inputSurface = ()=>{
     if(inputMethod==="text") return e("textarea",{value:userInput,onChange:(ev)=>setUserInput(ev.target.value),placeholder:t.textPh,style:{width:"100%",minHeight:120,background:C.ink,border:`1px solid ${C.line}`,borderRadius:12,padding:14,color:C.text,fontSize:14.5,resize:"vertical",direction:isR?"rtl":"ltr"}});
+    if(inputMethod==="link") return e("div",null,
+      e("div",{style:{display:"flex",alignItems:"center",gap:10,background:C.ink,border:`1px solid ${C.line}`,borderRadius:12,padding:"4px 14px"}},
+        e(Ico,{d:I.link,size:18,color:C.primary}),
+        e("input",{type:"url",value:userInput,onChange:(ev)=>setUserInput(ev.target.value),placeholder:t.linkPh,style:{flex:1,background:"transparent",border:"none",outline:"none",padding:"12px 4px",color:C.text,fontSize:14.5,direction:"ltr",textAlign:isR?"right":"left"}})),
+      e("div",{style:{fontSize:12.5,color:C.text,fontWeight:600,marginTop:12}},t.linkHint),
+      e("div",{style:{fontSize:11.5,color:C.slate,marginTop:4}},t.linkSub));
     if(inputMethod==="voice") return e("div",{style:{textAlign:"center",padding:"26px 18px"}},
       e("div",{style:{display:"flex",justifyContent:"center",gap:4,alignItems:"center",height:30,marginBottom:16}},[0,1,2,3,4,5,6].map(i=>e("span",{key:i,style:{width:4,borderRadius:99,background:C.primary,animation:`wave 1s ease-in-out ${i*0.1}s infinite`}}))),
       e("button",{style:{width:64,height:64,borderRadius:99,background:grad('primary','accent'),border:"none",display:"grid",placeItems:"center",margin:"0 auto"}},e(Ico,{d:I.mic,size:26,color:"#fff"})),
