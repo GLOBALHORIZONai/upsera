@@ -48,9 +48,8 @@ const CHARTER = `You operate under the Upsera Charter and MUST follow it:
 - Respect the laws, constitution, norms and human values of the user's region. Tailor advice to their geography.
 - Hard red lines, never assist with: prohibited goods, lethal weapons, sexual products, exploitation of minors, corruption, or anything against ethics, faith, or local norms. If a request crosses these lines, refuse politely and explain why.`;
 
-function buildSystemPrompt(lang) {
-  const langLine = lang === "ar"
-    ? "Respond in Arabic."
+function langInstruction(lang) {
+  return lang === "ar" ? "Respond in Arabic."
     : lang === "es" ? "Respond in Spanish."
     : lang === "fr" ? "Respond in French."
     : lang === "de" ? "Respond in German."
@@ -58,6 +57,36 @@ function buildSystemPrompt(lang) {
     : lang === "zh" ? "Respond in Chinese."
     : lang === "ja" ? "Respond in Japanese."
     : "Respond in English.";
+}
+
+function buildSystemPrompt(lang, mode) {
+  const langLine = langInstruction(lang);
+
+  if (mode === "report") {
+    return `You are Upsera, an autonomous AI marketing strategist that takes a business from idea to profit.
+${CHARTER}
+
+Your job now: produce a COMPLETE, professional business & marketing report for the user, based on their input and any edits they added. This is the final deliverable they came for - make it genuinely valuable, specific, and actionable. Avoid generic filler. Use concrete numbers, examples, and steps where possible. ${langLine}
+
+IMPORTANT: If any part touches legal or financial matters, add a brief note that this is general guidance and the user should consult a licensed professional in their region before acting.
+
+Return your answer as JSON ONLY (no markdown fences, no preamble) with this exact shape:
+{
+  "title": "a tailored report title",
+  "summary": "2-3 sentence executive summary",
+  "sections": [
+    { "heading": "section heading", "body": "detailed paragraph(s) for this section" }
+  ],
+  "action_plan": [
+    { "step": "action title", "detail": "what to do and why", "priority": "high|medium|low" }
+  ],
+  "risks": ["key risk or consideration 1", "risk 2"],
+  "disclaimer": "short note if legal/financial topics were covered, else empty string"
+}
+Produce 4-6 substantive sections and 4-7 action-plan steps.`;
+  }
+
+  // default: initial quick understanding
   return `You are Upsera, an autonomous AI marketing strategist that takes a business from idea to profit.
 ${CHARTER}
 
@@ -85,7 +114,7 @@ module.exports = async function handler(req, res) {
   try {
     // Vercel parses JSON bodies automatically; fall back to manual parse just in case.
     const body = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {});
-    const { path = "idea", input = "", lang = "en", inputMethod = "text" } = body;
+    const { path = "idea", input = "", lang = "en", inputMethod = "text", mode = "analyze", edits = "" } = body;
 
     if (!input || !input.trim()) {
       return res.status(400).json({ error: "Please provide a description of your business." });
@@ -102,7 +131,11 @@ module.exports = async function handler(req, res) {
     }
 
     const brief = PATH_BRIEFS[path] || PATH_BRIEFS.idea;
-    const userMessage = `Path context: ${brief}\n\nUser's input:\n${effectiveInput}`;
+    let userMessage = `Path context: ${brief}\n\nUser's input:\n${effectiveInput}`;
+    // Include the user's review edits when generating the full report.
+    if (mode === "report" && edits && edits.trim()) {
+      userMessage += `\n\nThe user reviewed our initial understanding and added these corrections/additions (treat as authoritative):\n${edits.trim()}`;
+    }
 
     const anthropicRes = await fetch(ANTHROPIC_URL, {
       method: "POST",
@@ -113,8 +146,8 @@ module.exports = async function handler(req, res) {
       },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 1200,
-        system: buildSystemPrompt(lang),
+        max_tokens: mode === "report" ? 4000 : 1200,
+        system: buildSystemPrompt(lang, mode),
         messages: [{ role: "user", content: userMessage }],
       }),
     });
@@ -138,7 +171,9 @@ module.exports = async function handler(req, res) {
       parsed = JSON.parse(clean);
     } catch (_) {
       // Fall back to returning raw text so the UI can still show something.
-      parsed = { understanding: [], recommendation: text, next_steps: [] };
+      parsed = mode === "report"
+        ? { title: "", summary: text, sections: [], action_plan: [], risks: [], disclaimer: "" }
+        : { understanding: [], recommendation: text, next_steps: [] };
     }
 
     return res.status(200).json({ ok: true, result: parsed });
