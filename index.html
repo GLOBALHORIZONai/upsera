@@ -102,6 +102,7 @@ const T = {
     understanding:"Our initial understanding", und:["Sector: local retail business","Audience: ages 25-40 who value quality","Opportunity: weak competitor digital content","Challenge: no unified visual identity"],
     yourEdits:"Your edits or suggestions", editsPh:"Anything to correct or add before we prepare the report? (you can also use voice)",
     byVoice:"By voice", accurate:"Understanding is accurate, continue", makeReport:"Create my report",
+    generating:"Generating...", generatingSub:"Crafting your full report", reportEyebrow:"YOUR REPORT", reportTitle:"Your Report", actionPlan:"Action Plan", risks:"Key considerations", getFormats:"Choose output formats", reportErr:"Could not generate the report.", prio:{high:"High",medium:"Medium",low:"Low"},
     outputTitle:"How would you like to receive your results?", outputSub:"Choose your output format - read, listen, or watch. You can pick more than one.",
     outputs:{doc:["Document","Word / PDF / HTML","Read"], audio:["Audio file","Listen to the report","Listen","New"], slides:["Presentation","PowerPoint + live","Watch"], video:["Summary video","Visual report","Watch"]},
     audioReady:"Your audio report is ready to listen",
@@ -143,6 +144,7 @@ const T = {
     understanding:"فهمنا الأولي لنشاطك", und:["القطاع: تجارة تجزئة بالمنطقة المحلية","الجمهور: شباب 25-40 مهتمون بالجودة","الفرصة: ضعف المنافسين في المحتوى الرقمي","التحدّي: غياب هوية بصرية موحّدة"],
     yourEdits:"تعديلاتك أو مقترحاتك", editsPh:"هل هناك ما تريد تصحيحه أو إضافته قبل إعداد التقرير؟ (يمكنك أيضاً التعبير صوتياً)",
     byVoice:"صوتياً", accurate:"الفهم دقيق، تابع", makeReport:"اصنع تقريري",
+    generating:"جارٍ التوليد...", generatingSub:"نصوغ تقريرك الكامل", reportEyebrow:"تقريرك", reportTitle:"تقريرك", actionPlan:"خطة العمل", risks:"اعتبارات مهمة", getFormats:"اختر صيغ المخرجات", reportErr:"تعذّر توليد التقرير.", prio:{high:"عالية",medium:"متوسطة",low:"منخفضة"},
     outputTitle:"كيف تريد أن تستقبل نتائجك؟", outputSub:"اختر صيغة المخرجات - اقرأ، استمع، أو شاهد. يمكنك اختيار أكثر من صيغة.",
     outputs:{doc:["مستند نصي","Word / PDF / HTML","أقرأ"], audio:["ملف صوتي","أستمع للتقرير","أستمع","جديد"], slides:["عرض تقديمي","PowerPoint + تقديم","أشاهد"], video:["فيديو ملخّص","تقرير مرئي","أشاهد"]},
     audioReady:"تقريرك الصوتي جاهز للاستماع",
@@ -259,6 +261,10 @@ function App(){
   const [analyzing,setAnalyzing] = useState(false);
   const [result,setResult] = useState(null);
   const [apiError,setApiError] = useState("");
+  const [editsText,setEditsText] = useState("");
+  const [report,setReport] = useState(null);
+  const [reporting,setReporting] = useState(false);
+  const [reportError,setReportError] = useState("");
   const idleTimer = useRef(null);
 
   const t = T[lang] || T.en;
@@ -284,7 +290,7 @@ function App(){
   },[stage]);
 
   const toggleOut = (id)=> setOutputs(o=> o.includes(id)? o.filter(x=>x!==id):[...o,id]);
-  const reset = ()=>{ setPath(null); setStage("entry"); setIdleNudge(false); setUserInput(""); setResult(null); setApiError(""); };
+  const reset = ()=>{ setPath(null); setStage("entry"); setIdleNudge(false); setUserInput(""); setResult(null); setApiError(""); setEditsText(""); setReport(null); setReportError(""); };
 
   // Call the serverless function to analyze the user's input via Claude.
   // Falls back gracefully (demo content) if the API isn't reachable yet.
@@ -310,6 +316,32 @@ function App(){
       setStage("review");
     }finally{
       setAnalyzing(false);
+    }
+  };
+
+  // Generate the full report (mode: report). Sends the user's input + their review edits.
+  const runReport = async ()=>{
+    setReportError("");
+    if(!userInput.trim()){
+      // No real input (stub paths): just show the output options screen.
+      setStage("flow"); return;
+    }
+    setReporting(true);
+    setStage("report");
+    try{
+      const r = await fetch("/api/analyze",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({ path, input:userInput, lang, inputMethod, mode:"report", edits:editsText }),
+      });
+      const data = await r.json();
+      if(!r.ok || data.error){ throw new Error(data.error || "Request failed"); }
+      setReport(data.result || null);
+    }catch(err){
+      setReportError(String(err && err.message || err));
+      setReport(null);
+    }finally{
+      setReporting(false);
     }
   };
   const eyebrow = (tx)=> e("div",{className:"mono",style:{fontSize:11.5,color:C.accent,letterSpacing:".08em",marginBottom:10}},tx);
@@ -441,11 +473,13 @@ function App(){
       e("div",{style:{fontSize:13,color:C.text,lineHeight:1.7}},result.recommendation)),
     e("div",{style:{background:C.surface,border:`1px solid ${C.line}`,borderRadius:16,padding:18,marginBottom:22}},
       e("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:10}},e(Ico,{d:I.msgSq,size:17,color:C.primary}),e("div",{style:{fontSize:13.5,fontWeight:700,color:C.text}},t.yourEdits)),
-      e("textarea",{placeholder:t.editsPh,style:{width:"100%",minHeight:90,background:C.ink,border:`1px solid ${C.line}`,borderRadius:12,padding:13,color:C.text,fontSize:13.5,resize:"vertical",direction:isR?"rtl":"ltr"}}),
+      e("textarea",{value:editsText,onChange:(ev)=>setEditsText(ev.target.value),placeholder:t.editsPh,style:{width:"100%",minHeight:90,background:C.ink,border:`1px solid ${C.line}`,borderRadius:12,padding:13,color:C.text,fontSize:13.5,resize:"vertical",direction:isR?"rtl":"ltr"}}),
       e("div",{style:{display:"flex",gap:8,marginTop:10,flexWrap:"wrap"}},
         e("button",{style:{display:"flex",alignItems:"center",gap:6,background:C.surfaceHi,border:`1px solid ${C.line}`,borderRadius:9,padding:"8px 13px",color:C.text,fontSize:12}},e(Ico,{d:I.mic,size:14,color:C.primary})," ",t.byVoice),
         e("button",{style:{display:"flex",alignItems:"center",gap:6,background:C.surfaceHi,border:`1px solid ${C.line}`,borderRadius:9,padding:"8px 13px",color:C.text,fontSize:12}},e(Ico,{d:I.thumb,size:14,color:C.accent})," ",t.accurate))),
-    cta(()=>setStage("flow"),t.makeReport)
+    e("button",{onClick:reporting?null:runReport,disabled:reporting,style:{background:grad('primary','accent'),color:C.ink,border:"none",borderRadius:13,padding:"14px 26px",fontWeight:800,fontSize:15,display:"flex",alignItems:"center",gap:9,opacity:reporting?.7:1,cursor:reporting?"wait":"pointer"}},
+      reporting ? e(Ico,{d:I.refresh,size:18,color:C.ink,sw:2.4}) : e(Ico,{d:I.sparkle,size:18,color:C.ink,fill:C.ink,sw:0}),
+      reporting ? (t.generating||"Generating...") : t.makeReport)
   );
 
   const flow = ()=> e("div",{className:"fade"},
@@ -473,7 +507,44 @@ function App(){
       SERVICE_META.map((x,i)=> e("div",{key:i,style:{background:C.surface,border:`1px solid ${C.line}`,borderRadius:11,padding:13,display:"flex",alignItems:"center",gap:9}},e(Ico,{d:I[x.icon],size:16,color:x.c}),e("span",{style:{fontSize:12,fontWeight:600,color:C.text}},t.services[x.k]))))
   );
 
-  const body = stage==="charter"?charter: stage==="entry"?entry: stage==="input"?input(): stage==="review"?review(): flow();
+  // ---- Full report screen ----
+  const prioColor = (p)=> p==="high"?R.rose : p==="medium"?R.gold : R.accent;
+  const prioLabel = (p)=> (t.prio && t.prio[p]) || p;
+  const reportView = ()=> e("div",{className:"fade"},
+    reporting && e("div",{style:{textAlign:"center",padding:"60px 20px"}},
+      e("div",{style:{width:54,height:54,margin:"0 auto 18px",borderRadius:99,background:grad('primary','accent'),display:"grid",placeItems:"center"}},e(Ico,{d:I.sparkle,size:24,color:C.ink,fill:C.ink,sw:0})),
+      e("div",{style:{fontSize:16,fontWeight:700,color:C.text,marginBottom:6}},t.generating||"Generating..."),
+      e("div",{style:{fontSize:13,color:C.slate}},t.generatingSub||"Crafting your full report")),
+    reportError && !reporting && e("div",{style:{background:`${A('rose','14')}`,border:`1px solid ${A('rose','55')}`,borderRadius:12,padding:16,marginBottom:16,fontSize:13,color:C.text,lineHeight:1.6}},
+      (t.reportErr||"Could not generate the report.")+" "+reportError),
+    (!reporting && report) && e("div",null,
+      eyebrow(t.reportEyebrow||"YOUR REPORT"),
+      e("h2",{style:{fontSize:25,fontWeight:800,margin:"0 0 8px",color:C.text}},report.title||t.reportTitle||"Your Report"),
+      report.summary && e("p",{style:{color:C.slate,fontSize:14.5,lineHeight:1.8,margin:"0 0 24px"}},report.summary),
+      Array.isArray(report.sections) && report.sections.map((s,i)=>
+        e("div",{key:i,style:{background:C.surface,border:`1px solid ${C.line}`,borderRadius:16,padding:18,marginBottom:14}},
+          e("div",{style:{fontSize:15,fontWeight:700,color:C.accent,marginBottom:8}},s.heading||""),
+          e("div",{style:{fontSize:13.5,color:C.text,lineHeight:1.8,whiteSpace:"pre-wrap"}},s.body||""))),
+      Array.isArray(report.action_plan) && report.action_plan.length>0 && e("div",{style:{marginTop:22,marginBottom:14}},
+        e("div",{style:{fontSize:16,fontWeight:800,color:C.text,marginBottom:12}},t.actionPlan||"Action Plan"),
+        report.action_plan.map((a,i)=>
+          e("div",{key:i,style:{background:C.surface,border:`1px solid ${C.line}`,borderRadius:13,padding:15,marginBottom:10,display:"flex",gap:12,alignItems:"flex-start"}},
+            e("div",{style:{width:26,height:26,borderRadius:8,background:`${withA({c:prioColor(a.priority)},'c','1F')}`,color:prioColor(a.priority),display:"grid",placeItems:"center",flexShrink:0,fontWeight:800,fontSize:13}},i+1),
+            e("div",{style:{flex:1}},
+              e("div",{style:{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:4}},
+                e("span",{style:{fontSize:13.5,fontWeight:700,color:C.text}},a.step||""),
+                a.priority && e("span",{style:{fontSize:10,fontWeight:700,color:prioColor(a.priority),background:`${withA({c:prioColor(a.priority)},'c','1A')}`,borderRadius:99,padding:"2px 9px"}},prioLabel(a.priority))),
+              e("div",{style:{fontSize:12.5,color:C.slate,lineHeight:1.7}},a.detail||""))))),
+      Array.isArray(report.risks) && report.risks.length>0 && e("div",{style:{background:`${A('gold','10')}`,border:`1px solid ${A('gold','44')}`,borderRadius:16,padding:18,marginBottom:16}},
+        e("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:10}},e(Ico,{d:I.shield,size:17,color:C.gold}),e("div",{style:{fontWeight:700,fontSize:14,color:C.text}},t.risks||"Key considerations")),
+        report.risks.map((rk,i)=> e("div",{key:i,style:{display:"flex",gap:8,fontSize:13,color:C.slate,marginBottom:7,lineHeight:1.6}},e("span",{style:{color:C.gold}},"•"),rk))),
+      report.disclaimer && e("div",{style:{fontSize:11.5,color:C.slate,fontStyle:"italic",lineHeight:1.6,marginBottom:18,padding:"10px 14px",background:C.surface,borderRadius:10,border:`1px solid ${C.line}`}},report.disclaimer),
+      e("div",{style:{display:"flex",gap:10,flexWrap:"wrap",marginTop:8}},
+        e("button",{onClick:()=>setStage("flow"),style:{background:grad('primary','accent'),color:C.ink,border:"none",borderRadius:12,padding:"13px 22px",fontWeight:800,fontSize:14,display:"flex",alignItems:"center",gap:8}},e(Ico,{d:I.fileType,size:17,color:C.ink}),t.getFormats||"Choose output formats"),
+        e("button",{onClick:reset,style:{background:C.surface,color:C.text,border:`1px solid ${C.line}`,borderRadius:12,padding:"13px 22px",fontWeight:600,fontSize:14}},t.back||"Start over")))
+  );
+
+  const body = stage==="charter"?charter: stage==="entry"?entry: stage==="input"?input(): stage==="review"?review(): stage==="report"?reportView(): flow();
   return e("div",{style:{minHeight:"100vh"}},
     header,
     e("main",{style:{maxWidth:1000,margin:"0 auto",padding:"32px 22px 60px"}}, body),
