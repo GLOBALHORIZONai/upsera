@@ -31,6 +31,9 @@
   input,textarea{font-family:inherit}
   .mono{font-family:'Space Grotesk',sans-serif}
   @keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes dots{0%,20%{opacity:0}50%{opacity:1}100%{opacity:0}}
+  .spin{animation:spin 1s linear infinite}
   @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
   @keyframes fadeIn{from{opacity:0}to{opacity:1}}
   @keyframes wave{0%,100%{height:8px}50%{height:22px}}
@@ -103,6 +106,8 @@ const T = {
     yourEdits:"Your edits or suggestions", editsPh:"Anything to correct or add before we prepare the report? (you can also use voice)",
     byVoice:"By voice", accurate:"Understanding is accurate, continue", makeReport:"Create my report",
     generating:"Generating...", generatingSub:"Crafting your full report", reportEyebrow:"YOUR REPORT", reportTitle:"Your Report", actionPlan:"Action Plan", risks:"Key considerations", getFormats:"Choose output formats", reportErr:"Could not generate the report.", prio:{high:"High",medium:"Medium",low:"Low"},
+    loadingMsgs:["Reading your input...","Understanding your market...","Spotting opportunities...","Almost there..."],
+    reportMsgs:["Analyzing in depth...","Building your strategy...","Writing the sections...","Preparing the action plan...","Finalizing your report..."],
     outputTitle:"How would you like to receive your results?", outputSub:"Choose your output format - read, listen, or watch. You can pick more than one.",
     outputs:{doc:["Document","Word / PDF / HTML","Read"], audio:["Audio file","Listen to the report","Listen","New"], slides:["Presentation","PowerPoint + live","Watch"], video:["Summary video","Visual report","Watch"]},
     audioReady:"Your audio report is ready to listen",
@@ -145,6 +150,8 @@ const T = {
     yourEdits:"تعديلاتك أو مقترحاتك", editsPh:"هل هناك ما تريد تصحيحه أو إضافته قبل إعداد التقرير؟ (يمكنك أيضاً التعبير صوتياً)",
     byVoice:"صوتياً", accurate:"الفهم دقيق، تابع", makeReport:"اصنع تقريري",
     generating:"جارٍ التوليد...", generatingSub:"نصوغ تقريرك الكامل", reportEyebrow:"تقريرك", reportTitle:"تقريرك", actionPlan:"خطة العمل", risks:"اعتبارات مهمة", getFormats:"اختر صيغ المخرجات", reportErr:"تعذّر توليد التقرير.", prio:{high:"عالية",medium:"متوسطة",low:"منخفضة"},
+    loadingMsgs:["نقرأ ما كتبته...","نفهم سوقك...","نرصد الفرص...","اقتربنا..."],
+    reportMsgs:["نحلّل بعمق...","نبني استراتيجيتك...","نكتب الأقسام...","نجهّز خطة العمل...","نضع اللمسات الأخيرة..."],
     outputTitle:"كيف تريد أن تستقبل نتائجك؟", outputSub:"اختر صيغة المخرجات - اقرأ، استمع، أو شاهد. يمكنك اختيار أكثر من صيغة.",
     outputs:{doc:["مستند نصي","Word / PDF / HTML","أقرأ"], audio:["ملف صوتي","أستمع للتقرير","أستمع","جديد"], slides:["عرض تقديمي","PowerPoint + تقديم","أشاهد"], video:["فيديو ملخّص","تقرير مرئي","أشاهد"]},
     audioReady:"تقريرك الصوتي جاهز للاستماع",
@@ -249,11 +256,12 @@ function App(){
   const [theme,setTheme] = useState("dark");
   const [lang,setLang] = useState("en");
   const [langOpen,setLangOpen] = useState(false);
-  const [stage,setStage] = useState("charter");
-  const [agreed,setAgreed] = useState(false);
+  const savedAgreed = (()=>{ try{ return sessionStorage.getItem("upsera_agreed")==="1"; }catch(_){ return false; } })();
+  const [stage,setStage] = useState(savedAgreed ? "entry" : "charter");
+  const [agreed,setAgreed] = useState(savedAgreed);
   const [path,setPath] = useState(null);
   const [inputMethod,setInputMethod] = useState("text");
-  const [outputs,setOutputs] = useState(["doc","audio"]);
+  const [outputs,setOutputs] = useState([]);
   const [choiceSel,setChoiceSel] = useState(null);
   const [advisorOpen,setAdvisorOpen] = useState(false);
   const [idleNudge,setIdleNudge] = useState(false);
@@ -265,6 +273,7 @@ function App(){
   const [report,setReport] = useState(null);
   const [reporting,setReporting] = useState(false);
   const [reportError,setReportError] = useState("");
+  const [loadStep,setLoadStep] = useState(0);
   const idleTimer = useRef(null);
 
   const t = T[lang] || T.en;
@@ -277,6 +286,12 @@ function App(){
   const metaRaw = path ? ({capital:R.accent,idea:R.primary,brand:R.gold,problem:R.rose}[path]) : R.primary;
 
   useEffect(()=>{ document.documentElement.setAttribute("data-theme", theme); },[theme]);
+  // Cycle loading messages while analyzing or generating the report.
+  useEffect(()=>{
+    if(!analyzing && !reporting){ setLoadStep(0); return; }
+    const id=setInterval(()=> setLoadStep(s=>s+1), 2600);
+    return ()=> clearInterval(id);
+  },[analyzing,reporting]);
 
   useEffect(()=>{
     document.documentElement.lang = lang; document.documentElement.dir = dir;
@@ -382,7 +397,7 @@ function App(){
     e("label",{style:{display:"flex",gap:10,alignItems:"flex-start",cursor:"pointer",marginBottom:18}},
       e("button",{onClick:()=>setAgreed(a=>!a),style:{width:24,height:24,borderRadius:7,background:agreed?C.accent:C.surface,border:`1.5px solid ${agreed?C.accent:C.line}`,display:"grid",placeItems:"center",flexShrink:0,marginTop:1}},agreed && e(Ico,{d:I.check,size:15,color:C.ink})),
       e("span",{style:{fontSize:12.5,color:C.slate,lineHeight:1.6}},t.agree)),
-    e("button",{onClick:()=> agreed && setStage("entry"),disabled:!agreed,
+    e("button",{onClick:()=>{ if(agreed){ try{ sessionStorage.setItem("upsera_agreed","1"); }catch(_){} setStage("entry"); } },disabled:!agreed,
       style:{width:"100%",background:agreed?grad('primary','accent'):C.surface,color:agreed?C.ink:C.slate,border:agreed?"none":`1px solid ${C.line}`,borderRadius:13,padding:"15px",fontWeight:800,fontSize:15,cursor:agreed?"pointer":"not-allowed"}},t.agreeStart)
   );
 
@@ -446,8 +461,8 @@ function App(){
       })),
     e("div",{style:{background:C.surface,border:`1px solid ${C.line}`,borderRadius:16,padding:18,marginBottom:22}},inputSurface()),
     e("button",{onClick:analyzing?null:runAnalyze,disabled:analyzing,style:{background:grad('primary','accent'),color:C.ink,border:"none",borderRadius:13,padding:"14px 26px",fontWeight:800,fontSize:15,display:"flex",alignItems:"center",gap:9,opacity:analyzing?.7:1,cursor:analyzing?"wait":"pointer"}},
-      analyzing ? e(Ico,{d:I.refresh,size:18,color:C.ink,sw:2.4}) : e(Ico,{d:I.sparkle,size:18,color:C.ink,fill:C.ink,sw:0}),
-      analyzing ? (t.analyzing||"Analyzing...") : t.continue),
+      analyzing ? e("span",{className:"spin",style:{width:17,height:17,borderRadius:99,border:`2.4px solid ${A('ink','55')}`,borderTopColor:C.ink,display:"inline-block"}}) : e(Ico,{d:I.sparkle,size:18,color:C.ink,fill:C.ink,sw:0}),
+      analyzing ? ((t.loadingMsgs && t.loadingMsgs[loadStep % t.loadingMsgs.length]) || t.analyzing || "Analyzing...") : t.continue),
     idleNudge && e("div",{className:"slideUp",style:{position:"fixed",bottom:22,insetInlineEnd:22,zIndex:45,width:320,background:C.surfaceHi,border:`1px solid ${A('primary','66')}`,borderRadius:16,padding:17,boxShadow:"0 12px 36px rgba(0,0,0,.5)"}},
       e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}},
         e("div",{style:{display:"flex",alignItems:"center",gap:8}},e(Ico,{d:I.clock,size:17,color:C.gold}),e("div",{style:{fontWeight:700,fontSize:13.5,color:C.text}},t.idleTitle)),
@@ -478,7 +493,7 @@ function App(){
         e("button",{style:{display:"flex",alignItems:"center",gap:6,background:C.surfaceHi,border:`1px solid ${C.line}`,borderRadius:9,padding:"8px 13px",color:C.text,fontSize:12}},e(Ico,{d:I.mic,size:14,color:C.primary})," ",t.byVoice),
         e("button",{style:{display:"flex",alignItems:"center",gap:6,background:C.surfaceHi,border:`1px solid ${C.line}`,borderRadius:9,padding:"8px 13px",color:C.text,fontSize:12}},e(Ico,{d:I.thumb,size:14,color:C.accent})," ",t.accurate))),
     e("button",{onClick:reporting?null:runReport,disabled:reporting,style:{background:grad('primary','accent'),color:C.ink,border:"none",borderRadius:13,padding:"14px 26px",fontWeight:800,fontSize:15,display:"flex",alignItems:"center",gap:9,opacity:reporting?.7:1,cursor:reporting?"wait":"pointer"}},
-      reporting ? e(Ico,{d:I.refresh,size:18,color:C.ink,sw:2.4}) : e(Ico,{d:I.sparkle,size:18,color:C.ink,fill:C.ink,sw:0}),
+      reporting ? e("span",{className:"spin",style:{width:17,height:17,borderRadius:99,border:`2.4px solid ${A('ink','55')}`,borderTopColor:C.ink,display:"inline-block"}}) : e(Ico,{d:I.sparkle,size:18,color:C.ink,fill:C.ink,sw:0}),
       reporting ? (t.generating||"Generating...") : t.makeReport)
   );
 
@@ -511,9 +526,11 @@ function App(){
   const prioColor = (p)=> p==="high"?R.rose : p==="medium"?R.gold : R.accent;
   const prioLabel = (p)=> (t.prio && t.prio[p]) || p;
   const reportView = ()=> e("div",{className:"fade"},
-    reporting && e("div",{style:{textAlign:"center",padding:"60px 20px"}},
-      e("div",{style:{width:54,height:54,margin:"0 auto 18px",borderRadius:99,background:grad('primary','accent'),display:"grid",placeItems:"center"}},e(Ico,{d:I.sparkle,size:24,color:C.ink,fill:C.ink,sw:0})),
-      e("div",{style:{fontSize:16,fontWeight:700,color:C.text,marginBottom:6}},t.generating||"Generating..."),
+    reporting && e("div",{style:{textAlign:"center",padding:"70px 20px"}},
+      e("div",{style:{position:"relative",width:64,height:64,margin:"0 auto 22px"}},
+        e("div",{className:"spin",style:{position:"absolute",inset:0,borderRadius:99,border:`3px solid ${A('line','99')}`,borderTopColor:R.primary,borderRightColor:R.accent}}),
+        e("div",{style:{position:"absolute",inset:0,display:"grid",placeItems:"center"}},e(Ico,{d:I.sparkle,size:22,color:C.accent,fill:C.accent,sw:0}))),
+      e("div",{style:{fontSize:16.5,fontWeight:700,color:C.text,marginBottom:8}},(t.reportMsgs && t.reportMsgs[loadStep % t.reportMsgs.length]) || t.generating),
       e("div",{style:{fontSize:13,color:C.slate}},t.generatingSub||"Crafting your full report")),
     reportError && !reporting && e("div",{style:{background:`${A('rose','14')}`,border:`1px solid ${A('rose','55')}`,borderRadius:12,padding:16,marginBottom:16,fontSize:13,color:C.text,lineHeight:1.6}},
       (t.reportErr||"Could not generate the report.")+" "+reportError),
