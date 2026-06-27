@@ -1,0 +1,9 @@
+{
+  "name": "upsera",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Upsera — autonomous AI marketing platform (by GLOBAL HORIZON INC.)",
+  "engines": {
+    "node": ">=18"
+  }
+}

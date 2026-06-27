@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Upsera - AI Marketing, Done For You</title>
+<meta name="description" content="A fully autonomous AI marketing platform - from idea to profit." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  /* Dark theme (default) - lighter, less gloomy surfaces */
+  :root, :root[data-theme="dark"]{
+    --ink:#0E1424; --surface:#1A2236; --surfaceHi:#243049; --line:#36436A;
+    --primary:#7AA3FF; --accent:#2BEDB8; --gold:#FFC96B; --rose:#FF8AA3;
+    --slate:#A8B3CC; --text:#F3F7FF; --shadow:rgba(0,0,0,.4);
+    --headerBg:rgba(14,20,36,.92);
+  }
+  /* Light theme */
+  :root[data-theme="light"]{
+    --ink:#F4F7FE; --surface:#FFFFFF; --surfaceHi:#EEF3FC; --line:#D9E1F2;
+    --primary:#3D6FE0; --accent:#0FB48A; --gold:#D9941F; --rose:#E04A6B;
+    --slate:#5B6680; --text:#101728; --shadow:rgba(20,40,80,.12);
+    --headerBg:rgba(244,247,254,.9);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--ink);color:var(--text);-webkit-font-smoothing:antialiased;transition:background .3s ease,color .3s ease}
+  body{font-family:'Inter',system-ui,sans-serif}
+  body.rtl{font-family:'Tajawal',system-ui,sans-serif}
+  ::selection{background:var(--primary);color:#fff}
+  button{font-family:inherit;cursor:pointer}
+  input,textarea{font-family:inherit}
+  .mono{font-family:'Space Grotesk',sans-serif}
+  @keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes wave{0%,100%{height:8px}50%{height:22px}}
+  @keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+  .rise{animation:rise .55s cubic-bezier(.2,.7,.3,1) both}
+  .fade{animation:fadeIn .4s ease both}
+  .slideUp{animation:slideUp .4s cubic-bezier(.2,.7,.3,1) both}
+  button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .pathcard{transition:transform .25s cubic-bezier(.2,.7,.3,1),border-color .25s}
+  .pathcard:hover{transform:translateY(-3px)}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:var(--line);border-radius:99px}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.development.js"></script>
+<script>
+const { useState, useEffect, useRef } = React;
+const e = React.createElement;
+const C = {
+  ink:"var(--ink)", surface:"var(--surface)", surfaceHi:"var(--surfaceHi)", line:"var(--line)",
+  primary:"var(--primary)", accent:"var(--accent)", gold:"var(--gold)", rose:"var(--rose)",
+  slate:"var(--slate)", text:"var(--text)",
+};
+// Raw hex (for gradients/SVG where var() may not apply, and alpha compositing)
+const RAW = {
+  dark:{ ink:"#0E1424", surface:"#1A2236", surfaceHi:"#243049", line:"#36436A", primary:"#7AA3FF", accent:"#2BEDB8", gold:"#FFC96B", rose:"#FF8AA3", slate:"#A8B3CC", text:"#F3F7FF" },
+  light:{ ink:"#F4F7FE", surface:"#FFFFFF", surfaceHi:"#EEF3FC", line:"#D9E1F2", primary:"#3D6FE0", accent:"#0FB48A", gold:"#D9941F", rose:"#E04A6B", slate:"#5B6680", text:"#101728" },
+};
+const LANGS = [
+  {code:"en", name:"English", dir:"ltr"},{code:"ar", name:"العربية", dir:"rtl"},
+  {code:"es", name:"Español", dir:"ltr"},{code:"zh", name:"中文", dir:"ltr"},
+  {code:"pt", name:"Português", dir:"ltr"},{code:"fr", name:"Français", dir:"ltr"},
+  {code:"de", name:"Deutsch", dir:"ltr"},{code:"ja", name:"日本語", dir:"ltr"},
+];
+const T = {
+  en:{
+    by:"by GLOBAL HORIZON", back:"Start over",
+    charterTitle:"The Upsera Charter", charterSub:"Before we begin, we commit to principles that protect your work and values.",
+    c1t:"We protect your business secrets & data", c1d:"Full confidentiality. Never shared with anyone.",
+    c2t:"Fair competition only", c2d:"No destroying competitors or their projects.",
+    c3t:"We respect your country's laws & norms", c3d:"Analysis based on your region's constitution, system and values.",
+    c4t:"Red lines we never cross", c4d:"No prohibited goods, no lethal weapons, no sexual products, no exploitation of minors, no corruption, nothing against ethics, faith or norms.",
+    geoNote:"Upsera analyzes every recommendation according to your geographic region, your country's laws, constitution, norms and human values - what fits one place may not fit another.",
+    agree:"I agree to the Privacy Policy, the Confidentiality Agreement and the Responsible Use Charter.", agreeStart:"Agree & Start",
+    whereTitle:"Where are you", whereNow:"right now?", whereSub:"Pick what describes you, and we'll meet you exactly where you are - whatever your starting point.",
+    paths:{capital:{title:"I have capital, looking for the right idea", sub:"We analyze your interests, region and time, then deliver ideas + a full feasibility study"},
+      idea:{title:"I have an idea, and want to start it right", sub:"We build your brand from scratch: name, logo, identity, website, and all materials"},
+      brand:{title:"I have a brand, and want to grow", sub:"We assess your brand honestly, and set a growth & marketing plan"},
+      problem:{title:"I have a business, and face challenges", sub:"You describe your problems, we analyze them and offer real solutions in your favor"}},
+    intros:{capital:{head:"Great - we'll find you the right idea", line:"Express yourself however you like, and we'll analyze it to deliver real ideas and a feasibility study."},
+      idea:{head:"Great - we'll build your project from scratch", line:"Express your idea any way you want, and you'll own a complete brand, choosing elements within your budget."},
+      brand:{head:"Great - we'll assess and grow your brand", line:"Send your current brand in any form, and we'll give you an honest assessment and a growth plan."},
+      problem:{head:"Great - we'll solve your challenges", line:"Express your business and problems the easiest way for you, and we'll offer practical solutions in your favor."}},
+    expressTitle:"How would you like to express yourself?",
+    accessNote:"Express yourself your way.", accessRest:"Write, talk, photograph, record, draw, or upload a file - Upsera understands you any way.",
+    methods:{text:["Write","Typed text"], voice:["Speak","Voice message"], image:["Photograph","A photo of my business"], video:["Video","A video tour"], draw:["Draw","Sketch by hand"], file:["Upload a file","Report / study / document"], choices:["Choose","Ready-made questions"]},
+    textPh:"Write freely here...", voiceHint:"Press and talk - we transcribe and understand your business.",
+    imageHint:"Upload or take a photo of your business or product", videoHint:"Upload or record a short video about your business", drawHint:"Draw your idea on the canvas - we understand sketches",
+    fileHint:"Upload a report, feasibility study, or any document", fileSub:"We read and fully analyze your file",
+    bizQ:"What type of business? (the next questions adapt to your choice)", bizTypes:["Restaurant / Café","Retail store","Services","E-commerce","Manufacturing","Other"],
+    continue:"Continue", analyzing:"Analyzing...", demoNote:"Showing a sample analysis. Connect the AI server (deploy to Vercel) to get a real, personalized one.", idleTitle:"Still with us?", idleBody:"Looks like you got busy. Prefer an easier way to finish your input now?", idleVoice:"Continue by voice", idleLater:"Later",
+    reviewEyebrow:"Your review before the report", reviewTitle:"Your input shapes your report",
+    reviewSub:"Before we produce your final report, here's our initial understanding of your situation. Tell us if anything needs editing or adding - we craft the report with you, not impose it.",
+    understanding:"Our initial understanding", und:["Sector: local retail business","Audience: ages 25-40 who value quality","Opportunity: weak competitor digital content","Challenge: no unified visual identity"],
+    yourEdits:"Your edits or suggestions", editsPh:"Anything to correct or add before we prepare the report? (you can also use voice)",
+    byVoice:"By voice", accurate:"Understanding is accurate, continue", makeReport:"Create my report",
+    outputTitle:"How would you like to receive your results?", outputSub:"Choose your output format - read, listen, or watch. You can pick more than one.",
+    outputs:{doc:["Document","Word / PDF / HTML","Read"], audio:["Audio file","Listen to the report","Listen","New"], slides:["Presentation","PowerPoint + live","Watch"], video:["Summary video","Visual report","Watch"]},
+    audioReady:"Your audio report is ready to listen",
+    learnTitle:"Learning loop - tell us each stage's results", learnBody:"After each stage, share a report on what you did and the results. We analyze it, learn from it, and suggest alternative plans or improvements.",
+    learnText:"Text report", learnVoice:"Voice report", learnFile:"Upload results file",
+    servicesTitle:"Full Upsera services available to you",
+    services:{app:"Turn website into an app",store:"Design an online store",dev:"Full growth plan",learn:"Learning suggestions",legal:"Legal guidance",alerts:"Proactive alerts",referral:"Referral & rewards",dashboard:"Your growth dashboard over time"},
+    advisor:"Upsera Advisor", advisorHi:"Your smart advisor", advisorBody:"Ask me any way - type or talk. I'm here throughout your journey.", advisorPh:"Type your question...",
+  },
+  ar:{
+    by:"by GLOBAL HORIZON", back:"البداية",
+    charterTitle:"ميثاق Upsera", charterSub:"قبل أن نبدأ، نلتزم معك بمبادئ تحمي عملك وقيمك.",
+    c1t:"حفظ أسرار العمل وبياناتك", c1d:"سرّية تامة، لا مشاركة مع أي طرف.",
+    c2t:"منافسة شريفة فقط", c2d:"لا تدمير للمنافسين أو المشاريع.",
+    c3t:"احترام قوانين بلدك وأعرافه", c3d:"تحليل وفق دستور ونظام وقيم منطقتك.",
+    c4t:"خطوط حمراء لا نتجاوزها", c4d:"لا محرّمات، لا أسلحة قتالية، لا منتجات جنسية، لا استغلال للقُصّر، لا فساد، لا ما يخالف الآداب والدين والأعراف.",
+    geoNote:"تحلّل Upsera كل توصية وفق منطقتك الجغرافية وقوانين بلدك ودستوره وأعرافه والقيم الإنسانية - ما يناسب مكاناً قد لا يناسب آخر.",
+    agree:"أوافق على سياسة الخصوصية واتفاقية حفظ الأسرار وميثاق الاستخدام المسؤول لمنصة Upsera.", agreeStart:"أوافق وأبدأ",
+    whereTitle:"أين أنت", whereNow:"الآن؟", whereSub:"اختر ما يصفك، ونرافقك من حيث أنت - مهما كانت نقطة انطلاقك.",
+    paths:{capital:{title:"عندي رأس مال، وأبحث عن الفكرة الصحيحة", sub:"نحلّل ميولك ومنطقتك ووقتك، ونقدّم أفكاراً + دراسة جدوى كاملة"},
+      idea:{title:"عندي فكرة، وأريد أن أبدأها صح", sub:"نبني علامتك من الصفر: اسم، شعار، هوية، موقع، وكل المواد"},
+      brand:{title:"عندي علامة جاهزة، وأريد أن أكبر", sub:"نقيّم علامتك بصدق، ونضع خطة نمو وتسويق"},
+      problem:{title:"عندي نشاط، وأواجه تحديات", sub:"تصف مشاكلك، فنحلّلها ونقدّم حلولاً حقيقية لصالحك"}},
+    intros:{capital:{head:"ممتاز - سنجد لك الفكرة الصحيحة", line:"عبّر عن نفسك بأي طريقة تريحك، ونحلّلها لنقدّم أفكاراً ودراسة جدوى حقيقية."},
+      idea:{head:"ممتاز - سنبني مشروعك من الصفر", line:"عبّر عن فكرتك بأي وسيلة، وستملك علامة كاملة تختار عناصرها حسب ميزانيتك."},
+      brand:{head:"ممتاز - سنقيّم علامتك ونكبّرها", line:"أرسل علامتك الحالية بأي شكل، ونعطيك تقييماً صادقاً وخطة نمو."},
+      problem:{head:"ممتاز - سنحلّ تحدياتك", line:"عبّر عن نشاطك ومشاكلك بالطريقة الأسهل لك، ونقدّم توصيات عملية لصالحك."}},
+    expressTitle:"كيف تريد أن تعبّر؟",
+    accessNote:"عبّر بالطريقة التي تناسبك.", accessRest:"اكتب، تكلّم، صوّر، سجّل، ارسم، أو ارفع ملفاً - Upsera تفهمك بأي وسيلة.",
+    methods:{text:["أكتب","نص مكتوب"], voice:["أتكلّم","رسالة صوتية"], image:["أصوّر","صورة لنشاطي"], video:["فيديو","جولة بالفيديو"], draw:["أرسم","رسمة بيدي"], file:["أرفع ملفاً","تقرير / دراسة / مستند"], choices:["أختار","أسئلة جاهزة"]},
+    textPh:"اكتب هنا بحرّية...", voiceHint:"اضغط وتحدّث - نحوّل كلامك ونفهم نشاطك.",
+    imageHint:"ارفع أو التقط صورة لنشاطك أو منتجك", videoHint:"ارفع أو سجّل فيديو قصيراً عن نشاطك", drawHint:"ارسم فكرتك على اللوحة - نفهم الرسم",
+    fileHint:"ارفع تقريراً، دراسة جدوى، أو أي مستند", fileSub:"نقرأ ملفك ونحلّله بالكامل",
+    bizQ:"ما نوع نشاطك؟ (تتغيّر الأسئلة التالية حسب اختيارك)", bizTypes:["مطعم / مقهى","متجر تجزئة","خدمات","تجارة إلكترونية","صناعة / إنتاج","أخرى"],
+    continue:"تابع", analyzing:"جارٍ التحليل...", demoNote:"هذا تحليل تجريبي. اربط خادم الذكاء الاصطناعي (انشر على Vercel) للحصول على تحليل حقيقي مخصّص.", idleTitle:"هل ما زلت معنا؟", idleBody:"يبدو أنك انشغلت. هل تفضّل طريقة أسهل لإكمال إدخالك الآن؟", idleVoice:"أكمل صوتياً", idleLater:"لاحقاً",
+    reviewEyebrow:"مراجعتك قبل إعداد التقرير", reviewTitle:"رأيك يصنع تقريرك",
+    reviewSub:"قبل أن ننتج تقريرك النهائي، هذا فهمنا الأولي لوضعك. أخبرنا إن كان هناك تعديل أو إضافة - نحلّل رأيك ونصوغ التقرير معك، لا نفرضه عليك.",
+    understanding:"فهمنا الأولي لنشاطك", und:["القطاع: تجارة تجزئة بالمنطقة المحلية","الجمهور: شباب 25-40 مهتمون بالجودة","الفرصة: ضعف المنافسين في المحتوى الرقمي","التحدّي: غياب هوية بصرية موحّدة"],
+    yourEdits:"تعديلاتك أو مقترحاتك", editsPh:"هل هناك ما تريد تصحيحه أو إضافته قبل إعداد التقرير؟ (يمكنك أيضاً التعبير صوتياً)",
+    byVoice:"صوتياً", accurate:"الفهم دقيق، تابع", makeReport:"اصنع تقريري",
+    outputTitle:"كيف تريد أن تستقبل نتائجك؟", outputSub:"اختر صيغة المخرجات - اقرأ، استمع، أو شاهد. يمكنك اختيار أكثر من صيغة.",
+    outputs:{doc:["مستند نصي","Word / PDF / HTML","أقرأ"], audio:["ملف صوتي","أستمع للتقرير","أستمع","جديد"], slides:["عرض تقديمي","PowerPoint + تقديم","أشاهد"], video:["فيديو ملخّص","تقرير مرئي","أشاهد"]},
+    audioReady:"تقريرك الصوتي جاهز للاستماع",
+    learnTitle:"حلقة التعلّم - أخبرنا بنتائج كل مرحلة", learnBody:"بعد تنفيذ كل مرحلة، شاركنا تقريراً عمّا نفّذته وكيف كانت النتائج. نحلّله، نتعلّم منه، ونقترح خططاً بديلة أو تطويراً.",
+    learnText:"تقرير نصي", learnVoice:"تقرير صوتي", learnFile:"ارفع ملف النتائج",
+    servicesTitle:"خدمات Upsera الكاملة المتاحة لك",
+    services:{app:"تحويل الموقع لتطبيق",store:"تصميم متجر إلكتروني",dev:"خطة تطوير كاملة",learn:"مقترحات تعلّم",legal:"توجيه قانوني",alerts:"تنبيهات استباقية",referral:"برنامج إحالة ومكافآت",dashboard:"لوحة تطوّرك عبر الزمن"},
+    advisor:"مستشار Upsera", advisorHi:"مستشارك الذكي", advisorBody:"اسألني بأي طريقة - اكتب أو تكلّم. أنا هنا طوال رحلتك.", advisorPh:"اكتب سؤالك...",
+  },
+};
+["es","zh","pt","fr","de","ja"].forEach(c=>{ if(!T[c]) T[c]=T.en; });
+
+// hex+alpha helper: returns rgba() from a raw theme color key + 2-digit alpha hex
+function withA(rawColors, key, alphaHex){
+  const hex = rawColors[key] || "#000000";
+  const a = parseInt(alphaHex,16)/255;
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a.toFixed(3)})`;
+}
+
+const Ico = ({d, size=18, color="currentColor", fill="none", sw=2}) =>
+  e("svg",{width:size,height:size,viewBox:"0 0 24 24",fill:fill,stroke:color,strokeWidth:sw,strokeLinecap:"round",strokeLinejoin:"round"},
+    Array.isArray(d)?d.map((p,i)=>e("path",{key:i,d:p})):e("path",{d}));
+const I = {
+  check:"M20 6 9 17l-5-5", arrowL:"M19 12H5 M12 19l-7-7 7-7", arrowR:"M5 12h14 M12 5l7 7-7 7",
+  sparkle:"M12 3l1.9 5.8L19.5 11l-5.6 2.2L12 19l-1.9-5.8L4.5 11l5.6-2.2z",
+  mic:["M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z","M19 10v2a7 7 0 0 1-14 0v-2","M12 19v3"],
+  type:"M4 7V5h16v2 M9 19h6 M12 5v14",
+  camera:["M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z","M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"],
+  video:"M23 7l-7 5 7 5V7z M14 5H3a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z",
+  pencil:"M12 20h9 M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z",
+  fileUp:["M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z","M14 2v6h6","M12 18v-6","M9 15l3-3 3 3"],
+  shield:"M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
+  lock:["M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z","M7 11V7a5 5 0 0 1 10 0v4"],
+  shieldChk:["M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z","M9 12l2 2 4-4"],
+  pin:["M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z","M12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"],
+  x:"M18 6 6 18 M6 6l12 12",
+  headphones:"M3 18v-6a9 9 0 0 1 18 0v6 M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z",
+  film:["M19.8 3H4.2A1.2 1.2 0 0 0 3 4.2v15.6A1.2 1.2 0 0 0 4.2 21h15.6a1.2 1.2 0 0 0 1.2-1.2V4.2A1.2 1.2 0 0 0 19.8 3z","M7 3v18 M17 3v18 M3 12h18"],
+  fileType:["M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z","M14 2v6h6"],
+  msg:"M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z",
+  clock:["M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z","M12 6v6l4 2"],
+  access:["M12 5a2 2 0 1 0 0-4 2 2 0 0 0 0 4z","M21 9l-7 1v5l2 7 M3 9l7 1 M10 15l-2 7"],
+  refresh:["M23 4v6h-6","M1 20v-6h6","M3.5 9a9 9 0 0 1 14.8-3.4L23 10 M1 14l4.7 4.4A9 9 0 0 0 20.5 15"],
+  thumb:"M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.3a2 2 0 0 0 2-1.7l1.4-9a2 2 0 0 0-2-2.3z M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3",
+  msgSq:"M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z",
+  volume:"M11 5L6 9H2v6h4l5 4V5z M19.07 4.93a10 10 0 0 1 0 14.14 M15.54 8.46a5 5 0 0 1 0 7.07",
+  smartphone:["M17 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z","M12 18h.01"],
+  shop:"M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z M3 6h18 M16 10a4 4 0 0 1-8 0",
+  trend:"M23 6l-9.5 9.5-5-5L1 18 M17 6h6v6",
+  grad:"M22 10L12 5 2 10l10 5 10-5z M6 12v5c0 1 2.7 3 6 3s6-2 6-3v-5",
+  scale:"M12 3v18 M5 7h14 M5 7l-3 7h6zM19 7l3 7h-6z",
+  bell:"M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9 M13.7 21a2 2 0 0 1-3.4 0",
+  award:["M12 15a7 7 0 1 0 0-14 7 7 0 0 0 0 14z","M8.2 13.9L7 23l5-3 5 3-1.2-9.1"],
+  chart:"M3 3v18h18 M18 17V9 M13 17V5 M8 17v-3",
+  checkSq:"M9 11l3 3L22 4 M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11",
+  globe:["M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z","M2 12h20","M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z"],
+  chevron:"M6 9l6 6 6-6",
+  sun:["M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10z","M12 1v2 M12 21v2 M4.2 4.2l1.4 1.4 M18.4 18.4l1.4 1.4 M1 12h2 M21 12h2 M4.2 19.8l1.4-1.4 M18.4 5.6l1.4-1.4"],
+  moon:"M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z",
+  compass:["M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z","M16.2 7.8l-2.9 6.5-6.5 2.9 2.9-6.5 6.5-2.9z"],
+  palette:["M12 22a10 10 0 1 1 0-20c5 0 9 3.6 9 8 0 3-2.5 4-4 4h-2a2 2 0 0 0-1.4 3.4A2 2 0 0 1 12 22z","M8.5 10.5h.01 M12 7.5h.01 M15.5 10.5h.01"],
+  building:["M3 21h18 M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16 M15 21V9h2a2 2 0 0 1 2 2v10","M9 7h2 M9 11h2 M9 15h2"],
+  wrench:"M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2.7-2.7 2.7-2.7z",
+};
+function Logo({h=34, theme="dark"}){
+  // viewBox 450 x 165 (extra bottom room for the "p" descender) → aspect ≈ 2.73
+  const w = h*2.73;
+  const sparkA = theme==="light" ? "#E8A317" : "#F5B544";
+  const sparkB = theme==="light" ? "#FFC04D" : "#FFD27A";
+  return e("svg",{width:w,height:h,viewBox:"-2 -10 450 165",style:{display:"block",direction:"ltr"}},
+    e("defs",null,
+      e("linearGradient",{id:"ug",x1:0,y1:1,x2:1,y2:0},e("stop",{offset:0,stopColor:"#5B8DEF"}),e("stop",{offset:1,stopColor:"#00D9A3"})),
+      e("linearGradient",{id:"uspark",x1:0,y1:1,x2:1,y2:0},e("stop",{offset:0,stopColor:sparkA}),e("stop",{offset:1,stopColor:sparkB}))
+    ),
+    // U-cup (gradient stroke)
+    e("path",{d:"M6,30 L6,96 A38,38 0 0 0 82,96 L82,30",fill:"none",stroke:"url(#ug)",strokeWidth:20,strokeLinecap:"round"}),
+    // spark rising from the U
+    e("path",{d:"M44,40 L56,-2 L67,28 L96,18 L72,46 Z",fill:"url(#uspark)"}),
+    // "p" in gradient (binds with the U to read "Up")
+    e("text",{x:92,y:118,fontSize:118,fontWeight:700,fill:"url(#ug)",fontFamily:"'Space Grotesk', sans-serif",letterSpacing:-3},"p"),
+    // "sera" - adapts to theme via CSS var
+    e("text",{x:168,y:118,fontSize:118,fontWeight:700,fill:"var(--text)",fontFamily:"'Space Grotesk', sans-serif",letterSpacing:-3},"sera")
+  );
+}
+const PATH_META = {capital:{icon:"compass",accent:C.accent}, idea:{icon:"palette",accent:C.primary}, brand:{icon:"building",accent:C.gold}, problem:{icon:"wrench",accent:C.rose}};
+const PATH_ORDER = ["capital","idea","brand","problem"];
+const INPUT_IDS = ["text","voice","image","video","draw","file","choices"];
+const INPUT_ICON = {text:"type",voice:"mic",image:"camera",video:"video",draw:"pencil",file:"fileUp",choices:"checkSq"};
+const OUT_IDS = ["doc","audio","slides","video"];
+const OUT_ICON = {doc:"fileType",audio:"headphones",slides:"film",video:"film"};
+const CHARTER_META = [{icon:"lock",ok:true},{icon:"shieldChk",ok:true},{icon:"pin",ok:true},{icon:"x",ok:false}];
+const SERVICE_META = [
+  {k:"app",icon:"smartphone",c:C.primary},{k:"store",icon:"shop",c:C.accent},
+  {k:"dev",icon:"trend",c:C.gold},{k:"learn",icon:"grad",c:C.rose},
+  {k:"legal",icon:"scale",c:C.primary},{k:"alerts",icon:"bell",c:C.accent},
+  {k:"referral",icon:"award",c:C.gold},{k:"dashboard",icon:"chart",c:C.rose},
+];
+
+function App(){
+  const [theme,setTheme] = useState("dark");
+  const [lang,setLang] = useState("en");
+  const [langOpen,setLangOpen] = useState(false);
+  const [stage,setStage] = useState("charter");
+  const [agreed,setAgreed] = useState(false);
+  const [path,setPath] = useState(null);
+  const [inputMethod,setInputMethod] = useState("text");
+  const [outputs,setOutputs] = useState(["doc","audio"]);
+  const [choiceSel,setChoiceSel] = useState(null);
+  const [advisorOpen,setAdvisorOpen] = useState(false);
+  const [idleNudge,setIdleNudge] = useState(false);
+  const [userInput,setUserInput] = useState("");
+  const [analyzing,setAnalyzing] = useState(false);
+  const [result,setResult] = useState(null);
+  const [apiError,setApiError] = useState("");
+  const idleTimer = useRef(null);
+
+  const t = T[lang] || T.en;
+  const R = RAW[theme] || RAW.dark;
+  const A = (key,alpha)=> withA(R,key,alpha);
+  const grad = (a,b)=> `linear-gradient(135deg, ${R[a]}, ${R[b]})`;
+  const dir = (LANGS.find(l=>l.code===lang)||{}).dir || "ltr";
+  const isR = dir==="rtl";
+  const meta = path ? PATH_META[path] : null;
+  const metaRaw = path ? ({capital:R.accent,idea:R.primary,brand:R.gold,problem:R.rose}[path]) : R.primary;
+
+  useEffect(()=>{ document.documentElement.setAttribute("data-theme", theme); },[theme]);
+
+  useEffect(()=>{
+    document.documentElement.lang = lang; document.documentElement.dir = dir;
+    document.body.className = isR ? "rtl" : "";
+  },[lang,dir,isR]);
+  useEffect(()=>{
+    if(stage!=="input"){ setIdleNudge(false); return; }
+    const r=()=>{ clearTimeout(idleTimer.current); setIdleNudge(false); idleTimer.current=setTimeout(()=>setIdleNudge(true),12000); };
+    r(); window.addEventListener("mousemove",r); window.addEventListener("keydown",r);
+    return ()=>{ clearTimeout(idleTimer.current); window.removeEventListener("mousemove",r); window.removeEventListener("keydown",r); };
+  },[stage]);
+
+  const toggleOut = (id)=> setOutputs(o=> o.includes(id)? o.filter(x=>x!==id):[...o,id]);
+  const reset = ()=>{ setPath(null); setStage("entry"); setIdleNudge(false); setUserInput(""); setResult(null); setApiError(""); };
+
+  // Call the serverless function to analyze the user's input via Claude.
+  // Falls back gracefully (demo content) if the API isn't reachable yet.
+  const runAnalyze = async ()=>{
+    setApiError("");
+    // If no text yet, just move on with demo content (e.g. user used voice/image stubs).
+    if(!userInput.trim()){ setResult(null); setStage("review"); return; }
+    setAnalyzing(true);
+    try{
+      const r = await fetch("/api/analyze",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({ path, input:userInput, lang }),
+      });
+      const data = await r.json();
+      if(!r.ok || data.error){ throw new Error(data.error || "Request failed"); }
+      setResult(data.result || null);
+      setStage("review");
+    }catch(err){
+      // Offline or not deployed yet: keep the flow working with demo content.
+      setApiError(String(err && err.message || err));
+      setResult(null);
+      setStage("review");
+    }finally{
+      setAnalyzing(false);
+    }
+  };
+  const eyebrow = (tx)=> e("div",{className:"mono",style:{fontSize:11.5,color:C.accent,letterSpacing:".08em",marginBottom:10}},tx);
+  const cta = (onClick,label)=> e("button",{onClick,style:{background:grad('primary','accent'),color:C.ink,border:"none",borderRadius:13,padding:"14px 26px",fontWeight:800,fontSize:15,display:"flex",alignItems:"center",gap:9}},
+    e(Ico,{d:I.sparkle,size:18,color:C.ink,fill:C.ink,sw:0}), label);
+
+  const langSwitcher = e("div",{style:{position:"relative"}},
+    e("button",{onClick:()=>setLangOpen(o=>!o),style:{display:"flex",alignItems:"center",gap:7,background:C.surface,border:`1px solid ${C.line}`,borderRadius:99,padding:"7px 13px",color:C.text,fontSize:12.5}},
+      e(Ico,{d:I.globe,size:15,color:C.slate}),(LANGS.find(l=>l.code===lang)||{}).name,e(Ico,{d:I.chevron,size:13,color:C.slate})),
+    langOpen && e("div",{style:{position:"absolute",top:"calc(100% + 6px)",insetInlineEnd:0,background:C.surfaceHi,border:`1px solid ${C.line}`,borderRadius:12,padding:6,minWidth:150,zIndex:50,boxShadow:"0 12px 30px rgba(0,0,0,.5)"}},
+      LANGS.map(l=> e("button",{key:l.code,onClick:()=>{setLang(l.code);setLangOpen(false);},
+        style:{display:"flex",alignItems:"center",justifyContent:"space-between",width:"100%",background:lang===l.code?`${A('primary','1A')}`:"transparent",border:"none",borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,textAlign:isR?"right":"left"}},
+        l.name, lang===l.code && e(Ico,{d:I.check,size:14,color:C.accent}))))
+  );
+
+  const header = e("header",{style:{borderBottom:`1px solid ${C.line}`,padding:"14px 22px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,background:"var(--headerBg)",backdropFilter:"blur(12px)",zIndex:30}},
+    e("div",{style:{display:"flex",alignItems:"center",gap:14}},
+      e(Logo,{h:34,theme:theme})),
+    e("div",{style:{display:"flex",alignItems:"center",gap:10}},
+      (path && stage!=="charter") && e("button",{onClick:reset,style:{display:"flex",alignItems:"center",gap:6,background:"transparent",border:`1px solid ${C.line}`,borderRadius:99,padding:"7px 14px",color:C.slate,fontSize:12.5}},
+        e(Ico,{d:isR?I.arrowR:I.arrowL,size:14,color:C.slate}),t.back),
+      e("button",{onClick:()=>setTheme(th=>th==="dark"?"light":"dark"),title:"Theme",style:{display:"grid",placeItems:"center",width:36,height:36,background:C.surface,border:`1px solid ${C.line}`,borderRadius:99,color:C.text}},
+        e(Ico,{d:theme==="dark"?I.sun:I.moon,size:16,color:C.gold})),
+      langSwitcher)
+  );
+
+  const charter = e("div",{className:"rise",style:{maxWidth:640,margin:"0 auto"}},
+    e("div",{style:{textAlign:"center",marginBottom:26}},
+      e("div",{style:{width:60,height:60,borderRadius:16,background:`${A('accent','1A')}`,border:`1px solid ${A('accent','44')}`,display:"grid",placeItems:"center",margin:"0 auto 16px"}},e(Ico,{d:I.shield,size:28,color:C.accent})),
+      e("h1",{style:{fontSize:26,fontWeight:800,margin:"0 0 8px",color:C.text}},t.charterTitle),
+      e("p",{style:{color:C.slate,fontSize:14,lineHeight:1.7}},t.charterSub)),
+    e("div",{style:{display:"grid",gap:11,marginBottom:20}},
+      CHARTER_META.map((c,i)=> e("div",{key:i,style:{background:C.surface,border:`1px solid ${c.ok?C.line:C.rose+"55"}`,borderRadius:13,padding:15,display:"flex",gap:12,alignItems:"flex-start"}},
+        e("div",{style:{width:34,height:34,borderRadius:9,background:c.ok?`${A('accent','1F')}`:`${A('rose','1F')}`,display:"grid",placeItems:"center",flexShrink:0}},e(Ico,{d:I[c.icon],size:17,color:c.ok?C.accent:C.rose})),
+        e("div",null,e("div",{style:{fontWeight:700,fontSize:13.5,color:C.text}},t["c"+(i+1)+"t"]),e("div",{style:{fontSize:12,color:C.slate,marginTop:3,lineHeight:1.6}},t["c"+(i+1)+"d"]))))),
+    e("div",{style:{background:C.surfaceHi,border:`1px solid ${C.line}`,borderRadius:13,padding:15,marginBottom:18}},
+      e("div",{style:{display:"flex",gap:9,alignItems:"flex-start"}},e(Ico,{d:I.pin,size:16,color:C.primary}),e("div",{style:{fontSize:12,color:C.slate,lineHeight:1.65}},t.geoNote))),
+    e("label",{style:{display:"flex",gap:10,alignItems:"flex-start",cursor:"pointer",marginBottom:18}},
+      e("button",{onClick:()=>setAgreed(a=>!a),style:{width:24,height:24,borderRadius:7,background:agreed?C.accent:C.surface,border:`1.5px solid ${agreed?C.accent:C.line}`,display:"grid",placeItems:"center",flexShrink:0,marginTop:1}},agreed && e(Ico,{d:I.check,size:15,color:C.ink})),
+      e("span",{style:{fontSize:12.5,color:C.slate,lineHeight:1.6}},t.agree)),
+    e("button",{onClick:()=> agreed && setStage("entry"),disabled:!agreed,
+      style:{width:"100%",background:agreed?grad('primary','accent'):C.surface,color:agreed?C.ink:C.slate,border:agreed?"none":`1px solid ${C.line}`,borderRadius:13,padding:"15px",fontWeight:800,fontSize:15,cursor:agreed?"pointer":"not-allowed"}},t.agreeStart)
+  );
+
+  const entry = e("div",{className:"rise"},
+    e("div",{style:{textAlign:"center",marginBottom:34}},
+      e("div",{className:"mono",style:{fontSize:12,color:C.accent,letterSpacing:".12em",marginBottom:12}},"UPSERA"),
+      e("h1",{style:{fontSize:34,fontWeight:800,margin:"0 0 10px",lineHeight:1.3,color:C.text}},t.whereTitle," ",e("span",{style:{color:C.gold}},t.whereNow)),
+      e("p",{style:{color:C.slate,fontSize:15,maxWidth:480,margin:"0 auto"}},t.whereSub)),
+    e("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(380px, 1fr))",gap:14}},
+      PATH_ORDER.map(pid=>{
+        const pm=PATH_META[pid], pt=t.paths[pid];
+        const pmRaw = {capital:R.accent,idea:R.primary,brand:R.gold,problem:R.rose}[pid];
+        return e("button",{key:pid,className:"pathcard",onClick:()=>{setPath(pid);setStage("input");},
+          style:{textAlign:isR?"right":"left",background:C.surface,border:`1px solid ${C.line}`,borderRadius:18,padding:22,display:"flex",gap:15,alignItems:"flex-start"}},
+          e("div",{style:{width:52,height:52,borderRadius:14,background:`${withA({c:pmRaw},'c','1A')}`,border:`1px solid ${withA({c:pmRaw},'c','55')}`,display:"grid",placeItems:"center",flexShrink:0}},e(Ico,{d:I[pm.icon],size:24,color:pmRaw})),
+          e("div",{style:{flex:1}},e("div",{style:{fontWeight:700,fontSize:16,lineHeight:1.4,color:C.text}},pt.title),e("div",{style:{fontSize:12.5,color:C.slate,marginTop:7,lineHeight:1.6}},pt.sub)));
+      }))
+  );
+
+  const inputSurface = ()=>{
+    if(inputMethod==="text") return e("textarea",{value:userInput,onChange:(ev)=>setUserInput(ev.target.value),placeholder:t.textPh,style:{width:"100%",minHeight:120,background:C.ink,border:`1px solid ${C.line}`,borderRadius:12,padding:14,color:C.text,fontSize:14.5,resize:"vertical",direction:isR?"rtl":"ltr"}});
+    if(inputMethod==="voice") return e("div",{style:{textAlign:"center",padding:"26px 18px"}},
+      e("div",{style:{display:"flex",justifyContent:"center",gap:4,alignItems:"center",height:30,marginBottom:16}},[0,1,2,3,4,5,6].map(i=>e("span",{key:i,style:{width:4,borderRadius:99,background:C.primary,animation:`wave 1s ease-in-out ${i*0.1}s infinite`}}))),
+      e("button",{style:{width:64,height:64,borderRadius:99,background:grad('primary','accent'),border:"none",display:"grid",placeItems:"center",margin:"0 auto"}},e(Ico,{d:I.mic,size:26,color:"#fff"})),
+      e("div",{style:{fontSize:12.5,color:C.slate,marginTop:12}},t.voiceHint));
+    if(["image","video","draw"].includes(inputMethod)){
+      const ic = inputMethod==="image"?I.camera:inputMethod==="video"?I.video:I.pencil;
+      const tx = inputMethod==="image"?t.imageHint:inputMethod==="video"?t.videoHint:t.drawHint;
+      return e("div",{style:{border:`1.5px dashed ${C.line}`,borderRadius:12,padding:"34px 18px",textAlign:"center"}},e(Ico,{d:ic,size:28,color:C.slate}),e("div",{style:{fontSize:13.5,color:C.text,fontWeight:600,marginTop:10}},tx));
+    }
+    if(inputMethod==="file") return e("div",null,
+      e("div",{style:{border:`1.5px dashed ${C.line}`,borderRadius:12,padding:"28px 18px",textAlign:"center",marginBottom:12}},e(Ico,{d:I.fileUp,size:28,color:C.slate}),e("div",{style:{fontSize:13.5,color:C.text,fontWeight:600,marginTop:10}},t.fileHint),e("div",{style:{fontSize:11.5,color:C.slate,marginTop:4}},t.fileSub)),
+      e("div",{style:{display:"flex",gap:7,flexWrap:"wrap",justifyContent:"center"}},["PDF","Word","Excel","PowerPoint","Images","Text"].map((x,i)=>e("span",{key:i,style:{fontSize:11,color:C.slate,background:C.ink,border:`1px solid ${C.line}`,borderRadius:99,padding:"4px 11px"}},x))));
+    if(inputMethod==="choices") return e("div",null,
+      e("div",{style:{fontSize:13.5,fontWeight:600,marginBottom:12,color:C.text}},t.bizQ),
+      e("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(150px, 1fr))",gap:9}},t.bizTypes.map((o,i)=>{
+        const on=choiceSel===i;
+        return e("button",{key:i,onClick:()=>setChoiceSel(i),style:{background:on?`${A('primary','1F')}`:C.ink,border:`1.5px solid ${on?C.primary:C.line}`,borderRadius:10,padding:"12px",color:C.text,fontSize:13,fontWeight:on?700:500,display:"flex",alignItems:"center",gap:8,justifyContent:"center"}},on&&e(Ico,{d:I.check,size:14,color:C.primary}),o);
+      })));
+  };
+  const input = ()=> e("div",{className:"fade"},
+    e("div",{style:{display:"flex",alignItems:"center",gap:12,marginBottom:6}},
+      e("div",{style:{width:40,height:40,borderRadius:11,background:`${withA({c:metaRaw},'c','1A')}`,display:"grid",placeItems:"center"}},e(Ico,{d:I[meta.icon],size:20,color:metaRaw})),
+      e("h2",{style:{fontSize:22,fontWeight:800,margin:0,color:C.text}},t.intros[path].head)),
+    e("p",{style:{color:C.slate,fontSize:14,margin:"0 0 20px",lineHeight:1.7}},t.intros[path].line),
+    e("div",{style:{display:"flex",gap:10,alignItems:"center",background:`${A('accent','12')}`,border:`1px solid ${A('accent','44')}`,borderRadius:12,padding:13,marginBottom:20}},
+      e(Ico,{d:I.access,size:18,color:C.accent}),e("div",{style:{fontSize:12.5,color:C.text,lineHeight:1.6}},e("b",null,t.accessNote)," ",t.accessRest)),
+    e("div",{style:{fontSize:13,fontWeight:700,marginBottom:12,color:C.text}},t.expressTitle),
+    e("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))",gap:10,marginBottom:18}},
+      INPUT_IDS.map(mid=>{
+        const on=inputMethod===mid, m=t.methods[mid];
+        return e("button",{key:mid,onClick:()=>setInputMethod(mid),style:{background:on?`${A('primary','1C')}`:C.surface,border:`1.5px solid ${on?C.primary:C.line}`,borderRadius:14,padding:"15px 10px",textAlign:"center"}},
+          e("div",{style:{width:40,height:40,borderRadius:11,background:on?C.primary:C.surfaceHi,display:"grid",placeItems:"center",margin:"0 auto 8px"}},e(Ico,{d:I[INPUT_ICON[mid]],size:19,color:on?"#fff":C.slate})),
+          e("div",{style:{fontWeight:700,fontSize:13,color:C.text}},m[0]),e("div",{style:{fontSize:10.5,color:C.slate,marginTop:2}},m[1]));
+      })),
+    e("div",{style:{background:C.surface,border:`1px solid ${C.line}`,borderRadius:16,padding:18,marginBottom:22}},inputSurface()),
+    e("button",{onClick:analyzing?null:runAnalyze,disabled:analyzing,style:{background:grad('primary','accent'),color:C.ink,border:"none",borderRadius:13,padding:"14px 26px",fontWeight:800,fontSize:15,display:"flex",alignItems:"center",gap:9,opacity:analyzing?.7:1,cursor:analyzing?"wait":"pointer"}},
+      analyzing ? e(Ico,{d:I.refresh,size:18,color:C.ink,sw:2.4}) : e(Ico,{d:I.sparkle,size:18,color:C.ink,fill:C.ink,sw:0}),
+      analyzing ? (t.analyzing||"Analyzing...") : t.continue),
+    idleNudge && e("div",{className:"slideUp",style:{position:"fixed",bottom:22,insetInlineEnd:22,zIndex:45,width:320,background:C.surfaceHi,border:`1px solid ${A('primary','66')}`,borderRadius:16,padding:17,boxShadow:"0 12px 36px rgba(0,0,0,.5)"}},
+      e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}},
+        e("div",{style:{display:"flex",alignItems:"center",gap:8}},e(Ico,{d:I.clock,size:17,color:C.gold}),e("div",{style:{fontWeight:700,fontSize:13.5,color:C.text}},t.idleTitle)),
+        e("button",{onClick:()=>setIdleNudge(false),style:{background:"transparent",border:"none"}},e(Ico,{d:I.x,size:16,color:C.slate}))),
+      e("div",{style:{fontSize:12,color:C.slate,lineHeight:1.6,marginBottom:12}},t.idleBody),
+      e("div",{style:{display:"flex",gap:8}},
+        e("button",{onClick:()=>{setInputMethod("voice");setIdleNudge(false);},style:{flex:1,background:C.primary,color:"#fff",border:"none",borderRadius:9,padding:"9px",fontSize:12,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:6}},e(Ico,{d:I.mic,size:14,color:"#fff"})," ",t.idleVoice),
+        e("button",{onClick:()=>setIdleNudge(false),style:{flex:1,background:C.surface,color:C.text,border:`1px solid ${C.line}`,borderRadius:9,padding:"9px",fontSize:12,fontWeight:600}},t.idleLater)))
+  );
+
+  const undList = (result && Array.isArray(result.understanding) && result.understanding.length) ? result.understanding : t.und;
+  const review = ()=> e("div",{className:"fade"},
+    eyebrow(t.reviewEyebrow),
+    e("h2",{style:{fontSize:23,fontWeight:800,margin:"0 0 8px",color:C.text}},t.reviewTitle),
+    e("p",{style:{color:C.slate,fontSize:14,margin:"0 0 22px",lineHeight:1.7}},t.reviewSub),
+    apiError && e("div",{style:{background:`${A('gold','14')}`,border:`1px solid ${A('gold','55')}`,borderRadius:12,padding:13,marginBottom:16,fontSize:12.5,color:C.text,lineHeight:1.6}},
+      (t.demoNote||"Showing sample analysis - connect the AI server to get a real one.")),
+    e("div",{style:{background:C.surface,border:`1px solid ${C.line}`,borderRadius:16,padding:18,marginBottom:18}},
+      e("div",{style:{fontSize:13,color:C.accent,fontWeight:700,marginBottom:12}},t.understanding),
+      undList.map((x,i)=> e("div",{key:i,style:{display:"flex",gap:8,fontSize:13,color:C.slate,marginBottom:8}},e(Ico,{d:I.check,size:15,color:C.accent}),x))),
+    (result && result.recommendation) && e("div",{style:{background:`${A('primary','12')}`,border:`1px solid ${A('primary','44')}`,borderRadius:16,padding:16,marginBottom:18,display:"flex",gap:11,alignItems:"flex-start"}},
+      e(Ico,{d:I.bulb,size:18,color:C.gold}),
+      e("div",{style:{fontSize:13,color:C.text,lineHeight:1.7}},result.recommendation)),
+    e("div",{style:{background:C.surface,border:`1px solid ${C.line}`,borderRadius:16,padding:18,marginBottom:22}},
+      e("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:10}},e(Ico,{d:I.msgSq,size:17,color:C.primary}),e("div",{style:{fontSize:13.5,fontWeight:700,color:C.text}},t.yourEdits)),
+      e("textarea",{placeholder:t.editsPh,style:{width:"100%",minHeight:90,background:C.ink,border:`1px solid ${C.line}`,borderRadius:12,padding:13,color:C.text,fontSize:13.5,resize:"vertical",direction:isR?"rtl":"ltr"}}),
+      e("div",{style:{display:"flex",gap:8,marginTop:10,flexWrap:"wrap"}},
+        e("button",{style:{display:"flex",alignItems:"center",gap:6,background:C.surfaceHi,border:`1px solid ${C.line}`,borderRadius:9,padding:"8px 13px",color:C.text,fontSize:12}},e(Ico,{d:I.mic,size:14,color:C.primary})," ",t.byVoice),
+        e("button",{style:{display:"flex",alignItems:"center",gap:6,background:C.surfaceHi,border:`1px solid ${C.line}`,borderRadius:9,padding:"8px 13px",color:C.text,fontSize:12}},e(Ico,{d:I.thumb,size:14,color:C.accent})," ",t.accurate))),
+    cta(()=>setStage("flow"),t.makeReport)
+  );
+
+  const flow = ()=> e("div",{className:"fade"},
+    e("div",{style:{background:grad('surfaceHi','surface'),border:`1px solid ${C.line}`,borderRadius:18,padding:22,marginBottom:22}},
+      e("h2",{style:{fontSize:21,fontWeight:800,margin:"0 0 6px",color:C.text}},t.outputTitle),e("p",{style:{color:C.slate,fontSize:13.5,lineHeight:1.7}},t.outputSub)),
+    e("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(210px, 1fr))",gap:12,marginBottom:22}},
+      OUT_IDS.map(fid=>{
+        const on=outputs.includes(fid), o=t.outputs[fid];
+        return e("button",{key:fid,onClick:()=>toggleOut(fid),style:{textAlign:isR?"right":"left",background:on?`${A('accent','16')}`:C.surface,border:`1.5px solid ${on?C.accent:C.line}`,borderRadius:15,padding:16,position:"relative"}},
+          o[3] && e("div",{style:{position:"absolute",top:10,insetInlineStart:10,fontSize:9.5,color:C.gold,fontWeight:700}},o[3]),
+          e("div",{style:{display:"flex",alignItems:"center",gap:11}},
+            e("div",{style:{width:40,height:40,borderRadius:11,background:on?C.accent:C.surfaceHi,display:"grid",placeItems:"center",flexShrink:0}},on?e(Ico,{d:I.check,size:19,color:C.ink}):e(Ico,{d:I[OUT_ICON[fid]],size:19,color:C.slate})),
+            e("div",null,e("div",{style:{fontSize:10.5,color:on?C.accent:C.slate,fontWeight:700}},o[2]),e("div",{style:{fontWeight:700,fontSize:14,color:C.text}},o[0]),e("div",{style:{fontSize:11,color:C.slate}},o[1]))));
+      })),
+    outputs.includes("audio") && e("div",{className:"fade",style:{background:C.surface,border:`1px solid ${A('accent','55')}`,borderRadius:14,padding:16,marginBottom:22,display:"flex",alignItems:"center",gap:14}},
+      e("button",{style:{width:44,height:44,borderRadius:99,background:grad('primary','accent'),border:"none",display:"grid",placeItems:"center",flexShrink:0}},e(Ico,{d:I.volume,size:20,color:"#fff"})),
+      e("div",{style:{flex:1}},e("div",{style:{fontSize:13,fontWeight:700,color:C.text}},t.audioReady),e("div",{style:{height:4,borderRadius:99,background:C.line,marginTop:8,position:"relative",overflow:"hidden"}},e("div",{style:{position:"absolute",insetInlineStart:0,top:0,bottom:0,width:"35%",background:`linear-gradient(90deg, ${R['primary']}, ${R['accent']})`,borderRadius:99}}))),
+      e("span",{className:"mono",style:{fontSize:11.5,color:C.slate}},"4:12")),
+    e("div",{style:{background:`${A('gold','10')}`,border:`1px solid ${A('gold','44')}`,borderRadius:16,padding:18,marginBottom:22}},
+      e("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:10}},e(Ico,{d:I.refresh,size:18,color:C.gold}),e("div",{style:{fontWeight:700,fontSize:14,color:C.text}},t.learnTitle)),
+      e("p",{style:{fontSize:12.5,color:C.slate,lineHeight:1.7,margin:"0 0 12px"}},t.learnBody),
+      e("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}},[["type",t.learnText],["mic",t.learnVoice],["fileUp",t.learnFile]].map((x,k)=>e("button",{key:k,style:{display:"flex",alignItems:"center",gap:6,background:C.surface,border:`1px solid ${C.line}`,borderRadius:9,padding:"8px 13px",color:C.text,fontSize:12}},e(Ico,{d:I[x[0]],size:14,color:C.gold}),x[1])))),
+    e("div",{style:{fontSize:13,color:C.slate,marginBottom:14,textAlign:"center"}},t.servicesTitle),
+    e("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))",gap:10}},
+      SERVICE_META.map((x,i)=> e("div",{key:i,style:{background:C.surface,border:`1px solid ${C.line}`,borderRadius:11,padding:13,display:"flex",alignItems:"center",gap:9}},e(Ico,{d:I[x.icon],size:16,color:x.c}),e("span",{style:{fontSize:12,fontWeight:600,color:C.text}},t.services[x.k]))))
+  );
+
+  const body = stage==="charter"?charter: stage==="entry"?entry: stage==="input"?input(): stage==="review"?review(): flow();
+  return e("div",{style:{minHeight:"100vh"}},
+    header,
+    e("main",{style:{maxWidth:1000,margin:"0 auto",padding:"32px 22px 60px"}}, body),
+    e("footer",{style:{borderTop:`1px solid ${C.line}`,padding:"22px",textAlign:"center"}},
+      e("div",{className:"mono",style:{fontSize:11,color:C.slate,letterSpacing:"1px"}},"by GLOBAL HORIZON INC.")),
+    stage!=="charter" && e("button",{onClick:()=>setAdvisorOpen(o=>!o),style:{position:"fixed",bottom:22,insetInlineStart:22,zIndex:40,display:"flex",alignItems:"center",gap:9,background:grad('primary','accent'),color:C.ink,border:"none",borderRadius:99,padding:"13px 18px",fontWeight:800,fontSize:13.5,boxShadow:"0 8px 24px rgba(0,0,0,.4)"}},e(Ico,{d:I.msg,size:17,color:C.ink}),t.advisor),
+    advisorOpen && e("div",{className:"fade",style:{position:"fixed",bottom:78,insetInlineStart:22,zIndex:40,width:300,background:C.surface,border:`1px solid ${C.line}`,borderRadius:16,padding:16,boxShadow:"0 12px 36px rgba(0,0,0,.5)"}},
+      e("div",{style:{fontWeight:700,fontSize:13.5,marginBottom:8,color:C.text}},t.advisorHi),
+      e("div",{style:{fontSize:12.5,color:C.slate,lineHeight:1.7,marginBottom:12}},t.advisorBody),
+      e("div",{style:{display:"flex",gap:8}},e("input",{placeholder:t.advisorPh,style:{flex:1,background:C.ink,border:`1px solid ${C.line}`,borderRadius:9,padding:"10px 12px",color:C.text,fontSize:12.5,direction:isR?"rtl":"ltr"}}),e("button",{style:{width:40,borderRadius:9,background:C.primary,border:"none",display:"grid",placeItems:"center"}},e(Ico,{d:I.mic,size:16,color:"#fff"}))))
+  );
+}
+try {
+  ReactDOM.createRoot(document.getElementById("root")).render(e(App));
+} catch (err) {
+  document.getElementById("root").innerHTML = '<div style="padding:30px;color:#FF7A97;font-family:monospace;direction:ltr"><h3>Render error</h3><pre>'+(err&&err.stack?err.stack:String(err))+'</pre></div>';
+}
+</script>
+</body>
+</html>
