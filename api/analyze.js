@@ -3,6 +3,7 @@
 // Env var required: ANTHROPIC_API_KEY  (set in Vercel project settings)
 
 const MODEL = "claude-sonnet-4-6";
+const FAST_MODEL = "claude-haiku-4-5-20251001";
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 
 // Fetch a website's visible text (best-effort), so Claude can analyze it.
@@ -83,7 +84,7 @@ Return your answer as JSON ONLY (no markdown fences, no preamble) with this exac
   "risks": ["key risk or consideration 1", "risk 2"],
   "disclaimer": "short note if legal/financial topics were covered, else empty string"
 }
-Produce exactly 2-3 short sections and 3-4 action-plan steps. Keep every field concise (1-3 sentences) - this report must be SHORT and complete, never cut off. Prioritize the most valuable points only.`;
+Produce exactly 2 short sections and 3 action-plan steps. Every field must be ONE or TWO sentences maximum. This is a brief demo report - keep it very short and always complete. Be concise above all.`;
   }
 
   // default: initial quick understanding
@@ -145,8 +146,8 @@ module.exports = async function handler(req, res) {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: MODEL,
-        max_tokens: mode === "report" ? 1300 : 900,
+        model: mode === "report" ? FAST_MODEL : MODEL,
+        max_tokens: mode === "report" ? 800 : 700,
         system: buildSystemPrompt(lang, mode),
         messages: [{ role: "user", content: userMessage }],
       }),
