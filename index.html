@@ -320,8 +320,11 @@ function App(){
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({ path, input:userInput, lang, inputMethod }),
       });
-      const data = await r.json();
-      if(!r.ok || data.error){ throw new Error(data.error || "Request failed"); }
+      const raw = await r.text();
+      let data;
+      try{ data = JSON.parse(raw); }
+      catch(_){ throw new Error((raw||"").slice(0,200) || ("Server returned status "+r.status)); }
+      if(!r.ok || data.error){ throw new Error(data.error || ("Request failed ("+r.status+")")); }
       setResult(data.result || null);
       setStage("review");
     }catch(err){
@@ -349,8 +352,11 @@ function App(){
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({ path, input:userInput, lang, inputMethod, mode:"report", edits:editsText }),
       });
-      const data = await r.json();
-      if(!r.ok || data.error){ throw new Error(data.error || "Request failed"); }
+      const raw = await r.text();
+      let data;
+      try{ data = JSON.parse(raw); }
+      catch(_){ throw new Error((raw||"").slice(0,200) || ("Server returned status "+r.status)); }
+      if(!r.ok || data.error){ throw new Error(data.error || ("Request failed ("+r.status+")")); }
       setReport(data.result || null);
     }catch(err){
       setReportError(String(err && err.message || err));
