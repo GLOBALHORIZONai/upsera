@@ -83,7 +83,7 @@ Return your answer as JSON ONLY (no markdown fences, no preamble) with this exac
   "risks": ["key risk or consideration 1", "risk 2"],
   "disclaimer": "short note if legal/financial topics were covered, else empty string"
 }
-Produce 4-6 substantive sections and 4-7 action-plan steps.`;
+Produce 3-4 substantive sections and 4-5 action-plan steps. Keep each section focused (2-4 sentences) so the report is complete and not cut off.`;
   }
 
   // default: initial quick understanding
@@ -146,7 +146,7 @@ module.exports = async function handler(req, res) {
       },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: mode === "report" ? 4000 : 1200,
+        max_tokens: mode === "report" ? 2000 : 1000,
         system: buildSystemPrompt(lang, mode),
         messages: [{ role: "user", content: userMessage }],
       }),
